@@ -1,6 +1,8 @@
 # Hashlife, but in Rust
 > Otherwise known as *Gosper's Algorithm*
 > (but in Rust).
+>
+> Also WIP.
 
 Hashlife is a fairly complex yet efficient algorithm used for accelerating
 cellular automata.
@@ -71,5 +73,7 @@ Isaac Clayton (`@slightknack`)**
 
 > <img height="128px" src="https://i2.kym-cdn.com/entries/icons/original/000/020/478/088.png">
 </img>
->
-> Certified Internet Meme Master
+> Certified  
+> Internet  
+> Meme  
+> Master  
