@@ -31,6 +31,10 @@ impl Quarters {
 pub struct World(HashMap<Quarters, Rc<Cell>>);
 
 impl World {
+    pub fn blank() -> World {
+        World(HashMap::new())
+    }
+
     pub fn blueprint(&mut self, quarters: Quarters, whole: Rc<Cell>) {
         self.0.insert(quarters, whole);
     }

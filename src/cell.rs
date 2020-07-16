@@ -128,6 +128,10 @@ impl Cell {
         };
     }
 
+    // pub fn jump(cell: S, step: usize, world: ) -> Rc<Cell> {
+    //
+    // }
+
     pub fn try_wrap(m: Macro, world: &mut World) -> Rc<Cell> {
         let quarters = Quarters::new(&m.tl, &m.tr, &m.bl, &m.br);
         if let Some(whole) = world.try_build(&quarters) {

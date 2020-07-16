@@ -3,5 +3,10 @@ mod world;
 mod macro_;
 
 fn main() {
-    println!("Hello, world!");
+    let glider = cell::Cell::Base([
+        false, true,  false, false,
+        false, false, true,  false,
+        true,  true,  true,  false,
+        false, false, false, false
+    ]);
 }
