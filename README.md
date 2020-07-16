@@ -1,7 +1,6 @@
 # Hashlife, but in Rust
 > Otherwise known as *Gosper's Algorithm*
-> (but in Rust).
->
+> (but in Rust).  
 > Also WIP.
 
 Hashlife is a fairly complex yet efficient algorithm used for accelerating
