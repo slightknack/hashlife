@@ -5,7 +5,7 @@ use crate::macro_::Macro;
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum Cell {
     Macro(Macro),
-    Base([bool;16]),
+    Base([bool;4]),
 }
 
 impl Cell {
@@ -56,7 +56,7 @@ impl Cell {
                 Cell::Base(bbl), Cell::Base(bbr),
             ) => {
                 // create combined grid
-                let mut grid = [[false;8];8];
+                let mut grid = [[false;4];4];
                 let cells = [
                     [btl, btr],
                     [bbl, bbr],
@@ -65,53 +65,33 @@ impl Cell {
                 // map smaller grids to combined grid
                 for (x, row) in grid.iter_mut().enumerate() {
                     for (y, item) in row.iter_mut().enumerate() {
-                        let cell = cells[if x < 4 { 0 } else { 1 }]
-                                        [if y < 4 { 0 } else { 1 }]
-                                        [(x % 4) * 4 + (y % 4)];
+                        let cell = cells[if x < 2 { 0 } else { 1 }]
+                                        [if y < 2 { 0 } else { 1 }]
+                                        [(x % 2) * 2 + (y % 2)];
                         *item = cell;
                     }
                 }
 
-                // build the first step
-                let mut step_1 = [[false;6];6];
-                for x in 1..7 {
-                    for y in 1..7 {
-                        // calculate alive and neighbors
-                        let alive = grid[x][y];
-                        let mut neighbors = 0;
-                        for nx in 0..3 { for ny in 0..3 {
-                            if grid[x + nx - 1][y + ny - 1] { neighbors += 1; }
-                        }}
+                // apply the GOL rule
+                let mut result = [false;4];
+                for x in 0..2 {
+                    for y in 0..2 {
+                        // count the neighbors
+                        let alive = grid[x + 1][y + 1];
+                        let mut neighbors = if alive { -1 } else { 1 };
+
+                        for nx in 0..3 {
+                            for ny in 0..3 {
+                                if grid[x + nx][y + ny] { neighbors += 1; }
+                            }
+                        }
 
                         // apply the GOL rule
                         if neighbors == 3 || alive && neighbors == 2 {
-                            step_1[x-1][y-1] = true;
+                            result[(x * 2) + y] = true;
                         }
                     }
                 }
-
-                // build the second step
-                let mut step_2 = [[false;4];4];
-                for x in 1..5 {
-                    for y in 1..5 {
-                        let alive = step_1[x][y];
-                        let mut neighbors = 0;
-                        for nx in 0..3 { for ny in 0..3 {
-                            if step_2[x + nx - 1][y + ny - 1] { neighbors += 1; }
-                        }}
-
-                        // apply the GOL rule
-                        if neighbors == 3 || alive && neighbors == 2 {
-                            step_2[x-1][y-1] = true;
-                        }
-                    }
-                }
-
-                // flatten the second step
-                let mut result = [false;16];
-                for x in 0..4 { for y in 0..4 {
-                    result[x * 4 + y] = step_2[x][y];
-                }}
 
                 Cell::try_wrap(
                     Macro {
