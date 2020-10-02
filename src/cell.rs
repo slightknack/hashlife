@@ -72,16 +72,23 @@ impl Cell {
                     }
                 }
 
-                let mut result = [[false;2];2];
-
-                // for each cell in the result
+                // apply the GOL rule
+                let mut result = [false;4];
                 for x in 0..2 {
                     for y in 0..2 {
-                        // for each cell
-                        for i in 0..3 {
-                            for j in 0..3 {
+                        // count the neighbors
+                        let alive = grid[x + 1][y + 1];
+                        let mut neighbors = if alive { -1 } else { 1 };
 
+                        for nx in 0..3 {
+                            for ny in 0..3 {
+                                if grid[x + nx][y + ny] { neighbors += 1; }
                             }
+                        }
+
+                        // apply the GOL rule
+                        if neighbors == 3 || alive && neighbors == 2 {
+                            result[(x * 2) + y] = true;
                         }
                     }
                 }
