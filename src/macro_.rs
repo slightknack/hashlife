@@ -9,6 +9,11 @@ pub struct Macro {
     pub bl: Rc<Cell>, pub br: Rc<Cell>,
     // The central subcell after n timesteps
     pub result: Rc<Cell>,
+    // the size of the cell.
+    // 0 is made of base cells
+    pub size: usize,
+    // whether the cell is just dead
+    pub is_dead: bool,
 }
 
 impl Macro {
