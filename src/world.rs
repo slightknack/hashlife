@@ -94,9 +94,9 @@ impl World {
     pub fn from_grid(grid: Vec<Vec<bool>>) -> (World, Rc<Cell>) {
         // find the longest dimension
         let height = grid.len()
-            .next_power_of_two() * 2;
+            .next_power_of_two(); // TODO: *2
         let width = grid.iter().fold(0, |p, n| p.max(n.len()))
-            .next_power_of_two() * 2;
+            .next_power_of_two();
         let square = height.max(width);
 
         // build a square grid, where the side length is a power of two

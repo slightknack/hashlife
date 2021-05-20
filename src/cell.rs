@@ -124,7 +124,7 @@ impl Cell {
         };
     }
 
-    pub fn trim(mut cell: &Rc<Cell>) -> Rc<Cell> {
+    pub fn trim(cell: &Rc<Cell>) -> Rc<Cell> {
         match cell.as_ref() {
             Cell::Base(_) => cell.clone(),
             Cell::Macro(Macro { tl, tr, bl, br, .. }) => {
@@ -145,6 +145,118 @@ impl Cell {
         }
     }
 
+    pub fn unwrap_macro(&self) -> Macro {
+        match self {
+            Cell::Base(_)  => panic!("expected a macro cell"),
+            Cell::Macro(m) => m.clone(),
+        }
+    }
+
+    // build a grid of cells of a certain size
+    fn macro_grid(m: Macro, size: usize) -> Vec<Vec<Macro>> {
+        // size can be at least zero
+        // so this is the base case
+        if m.size == size {
+            return vec![vec![m]];
+        } else if m.size < size {
+            panic!("macro cells are too small!");
+        }
+
+        // we can unwrap the macro here because the base case is handled
+        let tl = Cell::macro_grid(m.tl.unwrap_macro(), size);
+        let tr = Cell::macro_grid(m.tr.unwrap_macro(), size);
+        let bl = Cell::macro_grid(m.bl.unwrap_macro(), size);
+        let br = Cell::macro_grid(m.br.unwrap_macro(), size);
+
+        let mut grid = vec![];
+        for (mut l, mut r) in tl.into_iter().zip(tr.into_iter()) {
+            l.append(&mut r); grid.push(l);
+        }
+        for (mut l, mut r) in bl.into_iter().zip(br.into_iter()) {
+            l.append(&mut r); grid.push(l);
+        }
+
+        return grid;
+    }
+
+    // convolve across it and take the result
+    fn convolve_grid(grid: Vec<Vec<Macro>>, world: &mut World) -> Vec<Vec<Rc<Cell>>> {
+        let spacer = Cell::dead_of_size(grid[0][0].size, world);
+        let mut stepped_grid = vec![];
+
+        for i in 0..(grid.len() - 1) {
+            // handle even rows
+            let mut row = vec![];
+            for j in 0..(grid[0].len() - 1) {
+                row.push(grid[i][j].result.clone());
+                row.push(Macro::horiz(&grid[i][j], &grid[i][j+1], world).result);
+            }
+            row.push(spacer.clone());
+            stepped_grid.push(row);
+
+            // handle odd rows
+            let mut row = vec![];
+            for j in 0..(grid[0].len() - 1) {
+                row.push(Macro::vert(&grid[i][j], &grid[i+1][j], world).result);
+                row.push(Macro::center(
+                    &grid[i  ][j], &grid[i  ][j+1],
+                    &grid[i+1][j], &grid[i+1][j+1],
+                    world,
+                ).result)
+            }
+            row.push(spacer.clone());
+            stepped_grid.push(row);
+        }
+
+        let mut row = vec![];
+        for i in 0..grid[0].len() {
+            row.push(spacer.clone());
+        }
+        stepped_grid.push(row);
+
+        return stepped_grid;
+    }
+
+    fn build_up(grid: Vec<Vec<Rc<Cell>>>, world: &mut World) -> Vec<Vec<Rc<Cell>>> {
+        let mut new_grid = vec![];
+        for i in (0..grid.len()).step_by(2) {
+            let mut new_row = vec![];
+            for j in (0..grid.len()).step_by(2) {
+                new_row.push(Cell::new(
+                    grid[i  ][j].clone(), grid[i  ][j+1].clone(),
+                    grid[i+1][j].clone(), grid[i+1][j+1].clone(),
+                    world
+                ))
+            }
+            new_grid.push(new_row);
+        }
+
+        return new_grid;
+    }
+
+    fn pad_cell(macro_cell: Macro, world: &mut World) -> Macro {
+        let dp = if macro_cell.size == 0 {
+            Rc::new(Cell::Base(DEAD_BASE))
+        } else {
+            Cell::dead_of_size(macro_cell.size - 1, world)
+        };
+
+        // make a ring of padding around the trimmed macrocell
+        let padded_tl = Cell::new(dp.clone(), dp.clone(), dp.clone(), macro_cell.tl.clone(), world);
+        let padded_tr = Cell::new(dp.clone(), dp.clone(), macro_cell.tr.clone(), dp.clone(), world);
+        let padded_bl = Cell::new(dp.clone(), macro_cell.bl.clone(), dp.clone(), dp.clone(), world);
+        let padded_br = Cell::new(macro_cell.br.clone(), dp.clone(), dp.clone(), dp.clone(), world);
+
+        // this calculates the steps
+        let padded_macro = Cell::new(
+            padded_tl, padded_tr,
+            padded_bl, padded_br,
+            world,
+        );
+
+        return padded_macro.unwrap_macro();
+    }
+
     pub fn jump(cell: Rc<Cell>, step: usize, world: &mut World) -> Rc<Cell> {
         // trim the cell as small as possible
         let mut cell = Cell::trim(&cell);
@@ -159,37 +271,6 @@ impl Cell {
             );
         }
 
-        // cell must be a macro-cell at this point.
-        let macro_cell = match cell.as_ref() {
-            Cell::Macro(m) => m,
-            Cell::Base(_) => unreachable!(),
-        };
-
-        let dp = if macro_cell.size == 0 {
-            Rc::new(Cell::Base(DEAD_BASE))
-        } else {
-            Cell::dead_of_size(macro_cell.size - 1, world)
-        };
-
-        // need to pad *more*
-        // need to figure out how much
-        // this increases size by 1
-        // increase size by 2?
-        // TODO: refactor this out into a function.
-
-        // make a ring of padding around the trimmed macrocell
-        let padded_tl = Cell::new(dp.clone(), dp.clone(), dp.clone(), macro_cell.tl.clone(), world);
-        let padded_tr = Cell::new(dp.clone(), dp.clone(), macro_cell.tr.clone(), dp.clone(), world);
-        let padded_bl = Cell::new(dp.clone(), macro_cell.bl.clone(), dp.clone(), dp.clone(), world);
-        let padded_br = Cell::new(macro_cell.br.clone(), dp.clone(), dp.clone(), dp.clone(), world);
-
-        // this steps
-        let padded_macro = Cell::new(
-            padded_tl, padded_tl,
-            padded_bl, padded_br,
-            world,
-        );
-
         // TODO: pad with dead macrocells
         // if the result step of the current macrocell is too big,
         // split and rejoin
@@ -197,11 +278,37 @@ impl Cell {
         // join into a bigger macrocell and step
         // then step remaining
 
-        if step < 2usize.pow(macro_cell.size as u32) {
-            todo!()
+        let max_step = (step + 1).next_power_of_two() / 2;
+        let step_size = (max_step - 1).count_ones() as usize;
+        let rem_step = step - max_step;
+
+        // need to pad *more*
+        // need to figure out how much
+        // this increases size by 1
+        // increase size by 2?
+        // TODO: refactor this out into a function.
+        // padding depends on step size!
+
+        // cell must be a macro-cell at this point.
+        let macro_cell = cell.unwrap_macro();
+        let mut padded_macro = Cell::pad_cell(macro_cell, world);
+        while padded_macro.size < step_size {
+            padded_macro = Cell::pad_cell(padded_macro, world);
         }
 
-        todo!()
+        let grid = Cell::macro_grid(padded_macro, step_size);
+        let mut stepped = Cell::convolve_grid(grid, world);
+
+        while stepped.len() > 1 {
+            stepped = Cell::build_up(stepped, world);
+        }
+
+        let cell = stepped[0][0].clone();
+        return if rem_step == 0 {
+            Cell::trim(&cell)
+        } else {
+            Cell::jump(cell, rem_step, world)
+        };
     }
 
     pub fn dead_of_size(size: usize, world: &mut World) -> Rc<Cell> {
